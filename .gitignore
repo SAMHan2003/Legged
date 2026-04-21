@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+
+# Build
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+
+# Logs
+logs/
+runs/
+
+# VSCode
+.vscode/
+
+# IsaacGym (巨大)
+isaacgym/
+
+# Mujoco build
+*.mjb
+
+# Models
+*.pt
+*.pth
+
+# Data
+data/
+datasets/
+
+# Submodules（重要）
+LeggedGym-Ex/
+unitree_mujoco/
