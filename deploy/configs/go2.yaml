@@ -1,5 +1,5 @@
 policy_path: "{LEGGED_GYM_ROOT_DIR}/logs/go2/Apr12_11-24-38_simple_rl_isaacgym/exported/Apr12_11-24-38_simple_rl_isaacgym_ite-1.pt"
-xml_path: "/home/sam/Legged/unitree_mujoco/unitree_robots/go2/scene.xml"
+xml_path: "../unitree_mujoco/unitree_robots/go2/scene.xml"
 
 simulation_duration: 60.0
 simulation_dt: 0.005          # 200Hz physics

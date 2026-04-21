@@ -1,5 +1,5 @@
 import os
-LEGGED_GYM_ROOT_DIR = "/home/sam/Legged/LeggedGym-Ex"
+LEGGED_GYM_ROOT_DIR = os.path.join(os.path.dirname(__file__), "../LeggedGym-Ex")
 
 import time
 import argparse
