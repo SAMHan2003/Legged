@@ -1,0 +1,75 @@
+# === Go2 实机部署配置 (配套 deploy_real_go2.py config 版) ===
+# 所有数值都对应原 deploy_go2.py 里的硬编码常量
+
+# ---- 模型 ----
+policy_path: "/home/sam/Legged/LeggedGym-Ex/logs/go2/Apr12_11-24-38_simple_rl_isaacgym/exported/Apr12_11-24-38_simple_rl_isaacgym_ite-1.pt"     # 真机上就放脚本同目录即可;也支持 {LEGGED_GYM_ROOT_DIR} 占位符
+
+# ---- 频率 ----
+# control_dt = simulation_dt * control_decimation = 0.005 * 4 = 0.02s = 50 Hz
+simulation_dt: 0.005
+control_decimation: 4
+
+# ---- PD (每关节一个值,长度 12,按 policy 顺序) ----
+# 原脚本硬编码 Kp=20, Kd=0.5 全相同,下面展开成 12 维
+kps: [30.0, 25.0, 25.0, 30.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0]
+kds: [0.5, 0.5, 0.5,  0.5, 0.5, 0.5,  0.5, 0.5, 0.5,  0.5, 0.5, 0.5]
+
+# ---- 默认站姿 (按 policy 顺序) ----
+# 原脚本注释写 FL,FR,RL,RR,且 POLICY_TO_SDK 是恒等映射,
+# 所以 policy 顺序就是 SDK 顺序 = FL,FR,RL,RR
+default_angles: [ 0.0,  0.8, -1.5,     # FL
+                 -0.0,  0.8, -1.5,     # FR
+                  0.0,  1.0, -1.5,     # RL
+                 -0.0,  1.0, -1.5]     # RR
+
+# ---- 观测 / 动作缩放 ----
+ang_vel_scale: 0.25
+dof_pos_scale: 1.0
+dof_vel_scale: 0.05
+action_scale: 0.25
+
+clip_obs: 100.0
+clip_action: 100.0
+
+# ---- 速度指令 ----
+cmd_scale: [1.0, 1.0, 0.25]   # [lin_vel_x_scale, lin_vel_y_scale, ang_vel_yaw_scale]
+cmd_init: [0.0, 0.0, 0.0]     # 🚨 手柄版不再使用,但保留以便切回键盘版
+
+# ---- 关节映射 ----
+# SDK 电机索引顺序 (Unitree 固件固定):
+#   0:FL_hip 1:FL_thigh 2:FL_calf
+#   3:FR_hip 4:FR_thigh 5:FR_calf
+#   6:RL_hip 7:RL_thigh 8:RL_calf
+#   9:RR_hip 10:RR_thigh 11:RR_calf
+#
+# POLICY_TO_SDK[policy_idx] = sdk_idx
+# 恒等映射:policy 顺序 = SDK 顺序 = FL,FR,RL,RR
+policy_to_sdk: [0, 1, 2,     # FL
+                3, 4, 5,     # FR
+                6, 7, 8,     # RL
+                9, 10, 11]   # RR
+
+# ---- 安全:站立过渡时间 ----
+move_to_default_time: 2.0      # 和原脚本 STAND_DURATION 一致
+
+# ---- 关节位置限位 (弧度,按 policy 顺序) ----
+# Go2 官方限位: hip ±1.047, thigh [-1.5708, 3.4907], calf [-2.7227, -0.8378]
+joint_pos_lower: [-1.047, -1.5708, -2.7227,
+                  -1.047, -1.5708, -2.7227,
+                  -1.047, -1.5708, -2.7227,
+                  -1.047, -1.5708, -2.7227]
+joint_pos_upper: [ 1.047,  3.4907, -0.8378,
+                   1.047,  3.4907, -0.8378,
+                   1.047,  3.4907, -0.8378,
+                   1.047,  3.4907, -0.8378]
+
+# ================================================================
+# ↓↓↓ 以下是手柄版新增字段,原脚本不需要 ↓↓↓
+# ================================================================
+
+# 手柄摇杆推到底 (±1.0) 时给策略的最大 cmd,单位 m/s / rad/s
+# 第一次上手建议保守,走稳了再放大
+joystick_cmd_max: [0.5, 0.3, 0.5]    # [vx_max, vy_max, yaw_rate_max]
+
+# 如果某个方向反了,把对应位改成 -1.0
+joystick_cmd_sign: [1.0, 1.0, 1.0]   # [vx_sign, vy_sign, yaw_sign]
