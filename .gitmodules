@@ -1,6 +1,0 @@
-[submodule "LeggedGym-Ex"]
-	path = LeggedGym-Ex
-	url = https://github.com/lupinjia/LeggedGym-Ex.git
-[submodule "unitree_mujoco"]
-	path = unitree_mujoco
-	url = https://github.com/unitreerobotics/unitree_mujoco.git
