@@ -1,7 +1,7 @@
-# === Go2 实机部署配置 (配套 deploy_real_go2.py config 版) ===
+# === Go2 实机部署配置 ===
 # 所有数值都对应原 deploy_go2.py 里的硬编码常量
 
-# ---- 模型 ----
+# ---- module ----
 policy_path: "/home/sam/Legged/LeggedGym-Ex/logs/go2/Apr12_11-24-38_simple_rl_isaacgym/exported/Apr12_11-24-38_simple_rl_isaacgym_ite-1.pt"     # 真机上就放脚本同目录即可;也支持 {LEGGED_GYM_ROOT_DIR} 占位符
 
 # ---- 频率 ----
@@ -9,7 +9,7 @@ policy_path: "/home/sam/Legged/LeggedGym-Ex/logs/go2/Apr12_11-24-38_simple_rl_is
 simulation_dt: 0.005
 control_decimation: 4
 
-# ---- PD (每关节一个值,长度 12,按 policy 顺序) ----
+# ---- PD ----
 # 原脚本硬编码 Kp=20, Kd=0.5 全相同,下面展开成 12 维
 kps: [30.0, 30.0, 30.0, 
       30.0, 30.0, 30.0, 
@@ -18,9 +18,7 @@ kps: [30.0, 30.0, 30.0,
 
 kds: [0.5, 0.5, 0.5,  0.5, 0.5, 0.5,  0.5, 0.5, 0.5,  0.5, 0.5, 0.5]
 
-# ---- 默认站姿 (按 policy 顺序) ----
-# 原脚本注释写 FL,FR,RL,RR,且 POLICY_TO_SDK 是恒等映射,
-# 所以 policy 顺序就是 SDK 顺序 = FL,FR,RL,RR
+# ---- 默认站姿  ----
 default_angles: [ 0.0,  0.8, -1.5,     # FL
                  -0.0,  0.8, -1.5,     # FR
                   0.0,  1.0, -1.5,     # RL
@@ -37,15 +35,9 @@ clip_action: 100.0
 
 # ---- 速度指令 ----
 cmd_scale: [1.0, 1.0, 0.25]   # [lin_vel_x_scale, lin_vel_y_scale, ang_vel_yaw_scale]
-cmd_init: [0.0, 0.0, 0.0]     # 🚨 手柄版不再使用,但保留以便切回键盘版
+cmd_init: [0.0, 0.0, 0.0]     
 
 # ---- 关节映射 ----
-# SDK 电机索引顺序 (Unitree 固件固定):
-#   0:FL_hip 1:FL_thigh 2:FL_calf
-#   3:FR_hip 4:FR_thigh 5:FR_calf
-#   6:RL_hip 7:RL_thigh 8:RL_calf
-#   9:RR_hip 10:RR_thigh 11:RR_calf
-#
 # POLICY_TO_SDK[policy_idx] = sdk_idx
 # 恒等映射:policy 顺序 = SDK 顺序 = FL,FR,RL,RR
 policy_to_sdk: [0, 1, 2,     # FL
@@ -75,5 +67,5 @@ joint_pos_upper: [ 1.047,  3.4907, -0.8378,
 # 第一次上手建议保守,走稳了再放大
 joystick_cmd_max: [0.5, 0.3, 0.5]    # [vx_max, vy_max, yaw_rate_max]
 
-# 如果某个方向反了,把对应位改成 -1.0
+# 如果方向反了,把对应位改成 -1.0
 joystick_cmd_sign: [1.0, 1.0, 1.0]   # [vx_sign, vy_sign, yaw_sign]
