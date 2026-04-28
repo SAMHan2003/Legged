@@ -63,13 +63,6 @@ POLICY_ORDERS = {
 
 
 def build_policy_to_hw_mapping(policy_order_name: str):
-    """
-    Return arr such that  hw_index = arr[policy_index].
-
-    Example: if policy_order is FR_FL_RR_RL it happens to match hardware,
-    so arr = [0,1,2,3,4,5,6,7,8,9,10,11].  If policy is FL_FR_RL_RR,
-    policy[0] ('FL_hip') needs hw index 3, etc.
-    """
     if policy_order_name not in POLICY_ORDERS:
         raise ValueError(
             f"Unknown policy_joint_order '{policy_order_name}'. "
@@ -88,7 +81,6 @@ def build_policy_to_hw_mapping(policy_order_name: str):
 # ================================================================
 
 def get_gravity_orientation(quaternion):
-    """IMU quat convention on Go2 SDK: (w, x, y, z)."""
     qw, qx, qy, qz = quaternion[0], quaternion[1], quaternion[2], quaternion[3]
     g = np.zeros(3, dtype=np.float32)
     g[0] = 2 * (-qz * qx + qw * qy)
@@ -110,7 +102,6 @@ LOWSTATE_TOPIC = "rt/lowstate"
 
 
 def _init_cmd_struct(cmd: LowCmdGo):
-    """Fill the fixed header bytes of a go LowCmd message."""
     cmd.head[0] = 0xFE
     cmd.head[1] = 0xEF
     cmd.level_flag = 0xFF        # low-level control
@@ -125,7 +116,6 @@ def _init_cmd_struct(cmd: LowCmdGo):
 
 
 def _fill_zero_torque(cmd: LowCmdGo):
-    """All gains zero, all targets zero -> motors produce no torque."""
     for i in range(12):
         cmd.motor_cmd[i].q   = 0.0
         cmd.motor_cmd[i].dq  = 0.0
@@ -135,7 +125,6 @@ def _fill_zero_torque(cmd: LowCmdGo):
 
 
 def _fill_damping(cmd: LowCmdGo, kd: float = 3.0):
-    """Emergency stop: zero targets, only velocity damping.  Robot slumps safely."""
     for i in range(12):
         cmd.motor_cmd[i].q   = 0.0
         cmd.motor_cmd[i].dq  = 0.0
@@ -257,13 +246,6 @@ class Go2Deployer:
         self.pub.Write(self.low_cmd)
 
     def wait_for_low_state(self, timeout: float = 5.0):
-        """Wait until at least one LowState message has been received.
-
-        Note: we deliberately do NOT check `tick != 0`.  The Python version of
-        unitree_mujoco never updates the tick field, so that check hangs forever
-        in simulation.  Real Go2 firmware does set tick, but "got any message"
-        is already sufficient proof of connectivity.
-        """
         t0 = time.time()
         while True:
             with self._state_lock:
@@ -282,7 +264,6 @@ class Go2Deployer:
 
 
     def read_joint_state_policy_order(self):
-        """Return (q, dq) of length 12 in policy ordering."""
         q  = np.zeros(12, dtype=np.float32)
         dq = np.zeros(12, dtype=np.float32)
         with self._state_lock:
@@ -302,7 +283,6 @@ class Go2Deployer:
     # ---------- write in POLICY ----------
 
     def write_pd_cmd_policy_order(self, q_target, kp, kd):
-        """q_target, kp, kd are length-12 arrays in policy order."""
         for p in range(12):
             h = int(self.policy_to_hw[p])
             m = self.low_cmd.motor_cmd[h]
