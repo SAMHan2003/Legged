@@ -37,8 +37,6 @@ from unitree_sdk2py.go2.sport.sport_client import SportClient
 # Constants
 # ================================================================
 
-# Unitree Go2 hardware motor order (index into low_state.motor_state[i]
-# and low_cmd.motor_cmd[i]).  This is fixed by the SDK/firmware.
 HW_JOINT_NAMES = [
     'FR_hip', 'FR_thigh', 'FR_calf',   # 0,1,2
     'FL_hip', 'FL_thigh', 'FL_calf',   # 3,4,5
@@ -46,7 +44,6 @@ HW_JOINT_NAMES = [
     'RL_hip', 'RL_thigh', 'RL_calf',   # 9,10,11
 ]
 
-# Two policy orderings you might have trained with.
 POLICY_ORDERS = {
     # mujoco script's POLICY_JOINT_NAMES (FR first)
     "FR_FL_RR_RL": [
@@ -108,7 +105,6 @@ def get_gravity_orientation(quaternion):
 # 0x00 = damping / disabled.
 GO2_MODE_SERVO = 0x01
 
-# Channel/topic names (Unitree default for Go2, go message set)
 LOWCMD_TOPIC   = "rt/lowcmd"
 LOWSTATE_TOPIC = "rt/lowstate"
 
@@ -200,13 +196,11 @@ class Go2Deployer:
         self.policy = torch.jit.load(policy_path)
         self.policy.eval()
 
-        # ---------------- runtime buffers ----------------
         self.action         = np.zeros(self.num_actions, dtype=np.float32)
         self.target_dof_pos = self.default_angles.copy()
         self.obs            = np.zeros(self.num_obs,     dtype=np.float32)
         self.counter        = 0
 
-        # ---------------- DDS IO ----------------
         self.low_cmd   = unitree_go_msg_dds__LowCmd_()
         self.low_state = unitree_go_msg_dds__LowState_()
         _init_cmd_struct(self.low_cmd)
@@ -221,10 +215,6 @@ class Go2Deployer:
         self.sub = ChannelSubscriber(LOWSTATE_TOPIC, LowStateGo)
         self.sub.Init(self._on_low_state, 10)
 
-        # ---------------- release sport_mode (from old deploy_go2.py) ----------------
-        # Go2 开机默认 sport_mode_service 在发 rt/lowcmd,会有冲突.
-        # 必须先 StandDown + ReleaseMode 才能真正拿到 lowlevel 控制权.
-        # 在 unitree_mujoco 仿真下这些服务不存在,调用会失败,所以用 try 兜底.
         try:
             print("[io] initializing SportClient / MotionSwitcherClient ...")
             self._sc = SportClient()
@@ -260,7 +250,7 @@ class Go2Deployer:
             self.low_state = msg
             self._got_first_state = True
 
-    # ---------- io helpers ----------
+    # ---------- helpers ----------
 
     def send_cmd(self):
         self.low_cmd.crc = self._crc.Crc(self.low_cmd)
@@ -290,7 +280,6 @@ class Go2Deployer:
             tick = self.low_state.tick
         print(f"[io] connected to robot, LowState flowing.  (first tick={tick})")
 
-    # ---------- state readout in POLICY order ----------
 
     def read_joint_state_policy_order(self):
         """Return (q, dq) of length 12 in policy ordering."""
@@ -310,7 +299,7 @@ class Go2Deployer:
             gyro = np.array(self.low_state.imu_state.gyroscope,  dtype=np.float32)  # rad/s
         return quat, gyro
 
-    # ---------- command write in POLICY order ----------
+    # ---------- write in POLICY ----------
 
     def write_pd_cmd_policy_order(self, q_target, kp, kd):
         """q_target, kp, kd are length-12 arrays in policy order."""
@@ -324,7 +313,6 @@ class Go2Deployer:
             m.kd   = float(kd[p])
             m.tau  = 0.0
 
-    # ---------- phases ----------
 
     def phase_zero_torque_until_enter(self):
         print("\n[phase 1] zero-torque.  Robot should be limp.")
@@ -390,11 +378,9 @@ class Go2Deployer:
                 t_start = time.time()
                 self.counter += 1
 
-                # --- read state in policy order ---
                 q_policy, dq_policy = self.read_joint_state_policy_order()
                 quat, gyro = self.read_imu()
 
-                # --- build observation (SAME layout as your mujoco script) ---
                 qj_obs    = (q_policy - self.default_angles) * self.dof_pos_scale
                 dqj_obs   = dq_policy * self.dof_vel_scale
                 gravity   = get_gravity_orientation(quat)
@@ -407,19 +393,16 @@ class Go2Deployer:
                 self.obs[21:33] = dqj_obs
                 self.obs[33:45] = self.action
 
-                # --- inference ---
                 with torch.no_grad():
                     obs_t = torch.from_numpy(self.obs).unsqueeze(0)
                     act_t = self.policy(obs_t)
                 self.action = act_t.detach().numpy().squeeze().astype(np.float32)
                 self.action = np.clip(self.action, -100.0, 100.0)
 
-                # --- PD target and send ---
                 self.target_dof_pos = self.action * self.action_scale + self.default_angles
                 self.write_pd_cmd_policy_order(self.target_dof_pos, self.kps, self.kds)
                 self.send_cmd()
 
-                # --- optional debug ---
                 if debug_print and self.counter % debug_step == 1:
                     print(
                         f"[run] step={self.counter:5d} "
@@ -429,7 +412,6 @@ class Go2Deployer:
                         f"act[0:3]={self.action[0:3].round(2)}"
                     )
 
-                # --- pace loop at control_dt ---
                 dt_left = self.control_dt - (time.time() - t_start)
                 if dt_left > 0:
                     time.sleep(dt_left)
@@ -445,11 +427,6 @@ class Go2Deployer:
             self.send_cmd()
             time.sleep(self.control_dt)
         print("[phase 5] done.  Exit.")
-
-
-# ================================================================
-# Main
-# ================================================================
 
 def main():
     parser = argparse.ArgumentParser()
